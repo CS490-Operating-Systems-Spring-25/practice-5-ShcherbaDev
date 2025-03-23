@@ -5,11 +5,11 @@ export GLOBAL_HW_DIR="tmp"
 export SYSTEM_HW_DIR="hw"
 
 # RAM constants:
-export GLOBAL_RAM_FILE="${GLOBAL_HW_DIR}/RAM.txt"
+export GLOBAL_RAM_FILE="tmp/RAM.txt"
 export GLOBAL_RAM_SIZE="1024"
 
 # Kernel constants:
 export GLOBAL_BUILD_DIR="build"
-export GLOBAL_KERNEL_DISK="${GLOBAL_BUILD_DIR}/kernel.disk"
+export GLOBAL_KERNEL_DISK="build/kernel.disk"
 export INFO_KERNEL_START=40
 export KERNEL_START=41
