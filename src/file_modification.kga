@@ -1,0 +1,127 @@
+DEBUG_OFF
+
+var input_file
+var input_file_descriptor
+var counter
+
+label kernel_entry_point
+    // Initialize pointer to the stack
+    copy FREE_MEMORY_END to REG_A
+    write OP_INCR to REG_OP
+    cpu_exec
+    copy REG_RES to var:sys_stack_ptr
+
+    // Initialize a file system
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_init
+
+    // Ask for a file path
+    write "Type a file path: " to DISPLAY_BUFFER
+    write COLOR_NO to DISPLAY_COLOR
+    write OP_DISPLAY to REG_OP
+    cpu_exec
+
+    write KEYBOARD_READ_LINE to REG_A
+    write OP_READ_INPUT to REG_OP
+    cpu_exec
+    copy KEYBOARD_BUFFER to var:input_file
+
+    // Open a file
+    copy var:input_file to REG_A
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_open
+    jump_err label:kernel_end
+    copy REG_RES to var:input_file_descriptor
+
+    // Read a file line-by-line
+    // and detect lines, where the first character is a number
+    write 1 to var:counter
+    label file_modification_loop
+        // Read a current line
+        copy var:input_file_descriptor to REG_A
+        copy var:counter to REG_B
+        copy PROGRAM_COUNTER to var:sys_return
+        jump label:sys_fs_read
+        jump_err label:close_file
+
+        // copy REG_RES to DISPLAY_BUFFER
+        // write COLOR_GREEN to DISPLAY_COLOR
+        // write OP_DISPLAY_LN to REG_OP
+        // cpu_exec
+
+        var current_line
+        var current_line_first_symbol
+        copy REG_RES to var:current_line
+        
+        // Check if the first character is a number
+        copy var:current_line to REG_A
+        write 1 to REG_B
+        write "" to REG_C
+        write OP_GET_COLUMN to REG_OP
+        cpu_exec
+        copy REG_RES to var:current_line_first_symbol
+        copy var:current_line_first_symbol to REG_A
+        write OP_IS_NUM to REG_OP
+        cpu_exec
+        jump_if_not label:continue_loop_check
+
+        // Increment the first symbol which is a number
+        copy var:current_line_first_symbol to REG_A
+        write OP_INCR to REG_OP
+        cpu_exec
+        copy REG_RES to var:current_line_first_symbol
+
+        // Replace the original line's first symbol with the modified one
+        copy var:current_line to REG_A
+        write 1 to REG_B
+        write "" to REG_C
+        copy var:current_line_first_symbol to REG_D
+        write OP_REPLACE_COLUMN to REG_OP
+        cpu_exec
+        copy REG_RES to var:current_line
+
+        // Overwrite the current file line with the modified one
+        copy var:input_file_descriptor to REG_A
+        copy var:counter to REG_B
+        copy var:current_line to REG_C
+        copy PROGRAM_COUNTER to var:sys_return
+        jump label:sys_fs_write
+        jump_err label:close_file
+
+        // Print about changing a line
+        write "Changed line " to DISPLAY_BUFFER
+        write COLOR_GREEN to DISPLAY_COLOR
+        write OP_DISPLAY to REG_OP
+        cpu_exec
+        copy var:counter to DISPLAY_BUFFER
+        write OP_DISPLAY_LN to REG_OP
+        cpu_exec
+
+        // Increment a counter and
+        // do the next loop iteration
+        label continue_loop_check
+            copy var:counter to REG_A
+            write OP_INCR to REG_OP
+            cpu_exec
+            copy REG_RES to var:counter
+            jump label:file_modification_loop
+
+label close_file
+    copy var:input_file_descriptor to REG_A
+    copy PROGRAM_COUNTER to var:sys_return
+    jump label:sys_fs_close
+    jump label:kernel_end
+
+label kernel_end
+    copy REG_ERROR to DISPLAY_BUFFER
+    write COLOR_RED to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    write "Bye!" to DISPLAY_BUFFER
+    write COLOR_GREEN to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    write OP_HALT to REG_OP
+    cpu_exec
