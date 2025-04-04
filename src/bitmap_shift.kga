@@ -1,0 +1,143 @@
+write "cccgggggcccc" to 200
+write "ccgggggggggc" to 201
+write "ccbbbyybyccc" to 202
+write "cbybyyybyyyc" to 203
+write "cbybbyyybyyy" to 204
+write "cbbyyyybbbbc" to 205
+write "cccyyyyyyycc" to 206
+write "ccbbgbbbcccc" to 207
+write "cbbbgbbgbbbc" to 208
+write "bbbbggggbbbb" to 209
+write "yybgyggygbyy" to 210
+write "yyyggggggyyy" to 211
+write "yyggggggggyy" to 212
+write "ccgggccgggcc" to 213
+write "cbbbccccbbbc" to 214
+write "bbbbccccbbbb" to 215
+write "wwwwwwwwwwww" to 216
+
+var bitmap_start
+var bitmap_end
+write 200 to var:bitmap_start
+write 217 to var:bitmap_end
+
+var counter
+var counter_end
+
+// Calculate the bitmap size and use it as a loop end marker
+copy var:bitmap_end to REG_A
+copy var:bitmap_start to REG_B
+write OP_SUB to REG_OP
+cpu_exec
+copy REG_RES to var:counter_end
+
+label start
+    // Reset a counter
+    write 0 to var:counter
+
+    // Set background color to cyan:
+    write COLOR_CYAN to DISPLAY_BACKGROUND
+    write OP_SET_BACKGROUND_COLOR to REG_OP
+    cpu_exec
+
+    // Draw a bitmap
+    copy var:bitmap_start to REG_A
+    copy var:bitmap_end to REG_B
+    write OP_RENDER_BITMAP to REG_OP
+    cpu_exec
+
+    write OP_READ_INPUT to REG_OP
+    write KEYBOARD_READ_CHAR_SILENTLY to REG_A
+    cpu_exec
+
+    copy KEYBOARD_BUFFER to REG_A
+    write "q" to REG_B
+    write OP_CMP_EQ to REG_OP
+    cpu_exec
+    jump_if label:end
+
+    copy KEYBOARD_BUFFER to REG_A
+    write "a" to REG_B
+    cpu_exec
+    jump_if label:shift_left
+
+    write "d" to REG_B
+    cpu_exec
+    jump_if label:shift_right
+
+    jump label:start
+
+label shift_left
+    // Get an address relative to the bitmap space
+    var shift_left_bitmap_relative_counter
+    copy var:counter to REG_A
+    copy var:bitmap_start to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:shift_left_bitmap_relative_counter
+
+    // Remove symbol from the first column
+    // of a current bitmap row
+    copy *var:shift_left_bitmap_relative_counter to REG_A
+    write 1 to REG_B
+    write "" to REG_C
+    write "" to REG_D
+    write OP_REPLACE_COLUMN to REG_OP
+    cpu_exec
+    copy REG_RES to *var:shift_left_bitmap_relative_counter
+
+    // Increment counter
+    copy var:counter to REG_A
+    write OP_INCR to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter
+
+    // Check if should continue with the next row
+    copy var:counter to REG_A
+    copy var:counter_end to REG_B
+    write OP_CMP_LT to REG_OP
+    cpu_exec
+    jump_if label:shift_left
+
+    jump label:start
+
+label shift_right
+    // Get an address relative to the bitmap space
+    var shift_right_bitmap_relative_counter
+    copy var:counter to REG_A
+    copy var:bitmap_start to REG_B
+    write OP_ADD to REG_OP
+    cpu_exec
+    copy REG_RES to var:shift_right_bitmap_relative_counter
+
+    // Add a symbol to the first column
+    write "c" to REG_A
+    copy *var:shift_right_bitmap_relative_counter to REG_B
+    write "" to REG_C
+    write OP_CONCAT_WITH to REG_OP
+    cpu_exec
+    copy REG_RES to *var:shift_right_bitmap_relative_counter
+
+    // Increment counter
+    copy var:counter to REG_A
+    write OP_INCR to REG_OP
+    cpu_exec
+    copy REG_RES to var:counter
+
+    // Check if should continue with the next row
+    copy var:counter to REG_A
+    copy var:counter_end to REG_B
+    write OP_CMP_LT to REG_OP
+    cpu_exec
+    jump_if label:shift_right
+
+    jump label:start
+
+label end
+    write "Bye!" to DISPLAY_BUFFER
+    write COLOR_GREEN to DISPLAY_COLOR
+    write OP_DISPLAY_LN to REG_OP
+    cpu_exec
+
+    write OP_HALT to REG_OP
+    cpu_exec
